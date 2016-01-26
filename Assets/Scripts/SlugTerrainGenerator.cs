@@ -143,23 +143,23 @@ public class SlugTerrainGenerator : MonoBehaviour {
 				switch(_tileMap [i, j]) {
 
 				case (int)TILES.shallow_water:
-					tileVarition = HandleTransitionTiles(i, j, (int)TILES.shallow_water,  (int)TILES.deep_water);
+					tileVarition = HandleTransitionTiles(i, j, (int)TILES.deep_water);
 					break;
 
 				case (int)TILES.sand:
-					tileVarition = HandleTransitionTiles(i, j, (int)TILES.sand,  (int)TILES.shallow_water);
+					tileVarition = HandleTransitionTiles(i, j, (int)TILES.shallow_water);
 					break;
 
 				case (int)TILES.grass:
-					tileVarition = HandleTransitionTiles(i, j, (int)TILES.grass,  (int)TILES.sand);
+					tileVarition = HandleTransitionTiles(i, j, (int)TILES.sand);
 					break;
 
 				case (int)TILES.soft_montain:
-					tileVarition = HandleTransitionTiles(i, j, (int)TILES.soft_montain,  (int)TILES.grass);
+					tileVarition = HandleTransitionTiles(i, j, (int)TILES.grass);
 					break;
 
 				case (int)TILES.hard_montain:
-					tileVarition = HandleTransitionTiles(i, j, (int)TILES.hard_montain,  (int)TILES.soft_montain);
+					tileVarition = HandleTransitionTiles(i, j, (int)TILES.soft_montain);
 					break;
 				}
 					
@@ -168,7 +168,7 @@ public class SlugTerrainGenerator : MonoBehaviour {
 		}
 	}
 
-	int HandleTransitionTiles(int x, int y, int fromTile, int toTile) {
+	int HandleTransitionTiles(int x, int y, int toTile) {
 
 		int tileVarition = 0;
 
