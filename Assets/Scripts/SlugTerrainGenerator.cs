@@ -1,9 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-using LibNoise.Unity;
-using LibNoise.Unity.Generator;
-using LibNoise.Unity.Operator;
 
 public class SlugTerrainGenerator : MonoBehaviour {
 			
@@ -14,9 +11,10 @@ public class SlugTerrainGenerator : MonoBehaviour {
 		         soft_montain  = 31, 
 				 hard_montain  = 40}
 
-	public int   _width;
-	public int   _height;
-	public float _scale;
+	public int   _width = 64;
+	public int   _height = 64;
+	public float _mapScale = 0.25f;
+	public float _timeScale = 0.15f;
 
 	// Contains all the sprites 
 	private Sprite[] _tileSet;
@@ -30,14 +28,14 @@ public class SlugTerrainGenerator : MonoBehaviour {
 	private GameObject _terrain;
 	private GameObject _decoration;
 
+	private float _noiseSeed;
+	private float _seedTimer;
+	private Dictionary<int,int> _transitions;
+
 	private readonly int  NEIGHBORS_AMOUNT = 9;
 
 	// Use this for initialization
 	void Start () {
-
-		int   octaves = 6;
-		float frequency = 1.0f;
-		float persistence = 0.5f;
 
 		// Load all tile textures
 		_tileSet = Resources.LoadAll<Sprite>("Textures/tileset");
@@ -50,23 +48,37 @@ public class SlugTerrainGenerator : MonoBehaviour {
 		_decoration = new GameObject ();
 		_decoration.name = "Decoration";
 
+		_transitions = ParseTileTransitionsFile ("tile_transitions");
+
 		InitTerrain ();
 	}
 
 	void Update() {
 
-		if (Input.GetKeyDown (KeyCode.R)) {
+		if (Input.GetKeyUp (KeyCode.R)) {
 
 			foreach(Transform child in _decoration.transform) {
 				Destroy(child.gameObject);
 			}
 
-			float seedX = Random.Range (0, SlugUtils.TILE_SIZE);
-			float seedY = Random.Range (0, SlugUtils.TILE_SIZE);
-			float seedZ = Random.Range (1, 4);
+			_seedTimer = 0f;
+			_noiseSeed = Time.time;
 
-			GenerateTerrain (seedX, seedY, seedZ);
+			GenerateTerrain (_noiseSeed);
+			RenderTerrain ();
+		}
 
+		if (Input.GetKey (KeyCode.T) || Input.GetKey (KeyCode.Y)) {
+
+			foreach(Transform child in _decoration.transform) {
+				Destroy(child.gameObject);
+			}
+
+			float timeDirection = Input.GetKey (KeyCode.Y) ? -1f : 1f;
+
+			_seedTimer += Time.deltaTime * _timeScale * timeDirection;
+				
+			GenerateTerrain (_noiseSeed + _seedTimer);
 			RenderTerrain ();
 		}
 	}
@@ -102,16 +114,18 @@ public class SlugTerrainGenerator : MonoBehaviour {
 		return gameObj;
 	}
 	
-	void GenerateTerrain(float seedX, float seedY, float randomPow) {
+	void GenerateTerrain(float time) {
+
+		PerlinNoise noiseGen = new PerlinNoise (0);
 
 		for (int i = 0; i < _width; i++) {
 
 			for (int j = 0; j < _height; j++) {
 
-				float x = seedX + (float)i / (float)_width * _scale;
-				float y = seedY + (float)j / (float)_height * _scale;
+				float x = (float)i / (float)_width;
+				float y = (float)j / (float)_height;
 
-				float noise = Mathf.Pow(Mathf.PerlinNoise (x, y), randomPow);
+				float noise = noiseGen.FractalNoise3D(x, y, time, 2, _mapScale + 0.01f, 1.75f);
 
 				_tileMap[i,j] = NoiseToTile (noise);
 			}
@@ -198,25 +212,22 @@ public class SlugTerrainGenerator : MonoBehaviour {
 
 	int NoiseToTile(float noiseValue) {
 
-		noiseValue = Mathf.Clamp (noiseValue, 0f, 1f);
+		noiseValue = Mathf.Clamp (noiseValue, -2f, 2f);
 
-		if (noiseValue >= 0f && noiseValue < 0.3f)
+		if (noiseValue >= -2f  && noiseValue < 0f)
 			return (int)TILES.deep_water;
 
-		if (noiseValue >= 0.3f && noiseValue < 0.4f)
+		if (noiseValue >= 0f   && noiseValue < 0.25f)
 			return (int)TILES.shallow_water;
 
-		if (noiseValue >= 0.4f && noiseValue < 0.495f)
+		if (noiseValue >= 0.25f && noiseValue < 0.4f)
 			return (int)TILES.sand;
 
-		if (noiseValue >= 0.495f && noiseValue < 0.7f)
+		if (noiseValue >= 0.4f  && noiseValue < 0.75f)
 			return (int)TILES.grass;
 
-		if (noiseValue >= 0.7f && noiseValue < 0.9f)
+		if (noiseValue >= 0.75f && noiseValue < 0.95f)
 			return (int)TILES.soft_montain;
-
-		if (noiseValue >= 0.9f && noiseValue <= 1f)
-			return (int)TILES.hard_montain;
 
 		return (int)TILES.hard_montain;
 	}
@@ -231,34 +242,33 @@ public class SlugTerrainGenerator : MonoBehaviour {
 				sum += (int)Mathf.Pow (2f, (float)i);
 		}
 
-		if (sum == 294 || sum == 35  || sum == 38  || 
-			sum == 257 || sum == 39  || sum == 295 || sum == 34) 
-			return -4;
-
-		if (sum == 32  || sum == 36  || sum == 288 || sum == 292) 
-			return -3;
-		 
-		if (sum == 480 || sum == 416 || sum == 420 || sum == 484 || 
-			sum == 164 || sum == 224 || sum == 226 || sum == 160) 
-			return -2;
-
-		if (sum == 3   || sum == 5   || sum == 6   || sum == 7)   
-			return -1;
-
-		if (sum == 192 || sum == 128 || sum == 384 || sum == 448) 
-			return  1;
-
-		if (sum == 11  || sum == 79  || sum == 75  || sum == 15 || 
-			sum == 14  || sum == 10)  
-			return  2;
-
-		if (sum == 8   || sum == 9   || sum == 72  || sum == 73)  
-			return  3;
-
-		if (sum == 200 || sum == 201 || sum == 456 || sum == 457  || 
-			sum == 137 || sum == 136 || sum == 392) 
-			return  4;
+		if(_transitions.ContainsKey(sum))
+			return _transitions [sum];
 
 		return 0;
+	}
+
+	Dictionary<int, int> ParseTileTransitionsFile(string filepath) {
+
+		Dictionary<int, int> tileTransitions = new Dictionary<int, int> ();
+		TextAsset file = Resources.Load (filepath) as TextAsset;
+
+		foreach (string line in file.text.Split('\n')) {
+
+			string[] transition = line.Split (' ');
+
+			for(int i = 0; i < transition.Length - 1; i++) {
+
+				int key = int.Parse (transition [i]);
+				int value = int.Parse (transition [transition.Length - 1]);
+
+				Debug.Log ("Key = " + key);
+				Debug.Log ("Value = " + value);
+
+				tileTransitions.Add(key, value);
+			}
+		}
+
+		return tileTransitions;
 	}
 }
