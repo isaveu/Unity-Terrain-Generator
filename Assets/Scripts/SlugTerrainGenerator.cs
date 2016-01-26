@@ -262,9 +262,6 @@ public class SlugTerrainGenerator : MonoBehaviour {
 				int key = int.Parse (transition [i]);
 				int value = int.Parse (transition [transition.Length - 1]);
 
-				Debug.Log ("Key = " + key);
-				Debug.Log ("Value = " + value);
-
 				tileTransitions.Add(key, value);
 			}
 		}
